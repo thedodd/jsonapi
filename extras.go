@@ -27,7 +27,6 @@ func (extras *ApiExtras) AddRelationshipLink(linkName string, recordType string,
 }
 
 func (extras *ApiExtras) Build() error {
-
 	extras.KeyedRelationshipLinks = make(map[string][]*LinkConfiguration)
 
 	for _, lc := range extras.RelationshipLinks {
