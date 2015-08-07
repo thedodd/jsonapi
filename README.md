@@ -10,7 +10,7 @@ Also visit, [Godoc](http://godoc.org/github.com/shwoodard/jsonapi).
 ## Installation
 
 ```
-go get -u github.com/shoodard/jsonapi
+go get -u github.com/shwoodard/jsonapi
 ```
 
 Or, see [Alternative Installation](#alternative-installation).
@@ -341,13 +341,13 @@ I use git subtrees to manage dependencies rather than `go get` so that
 the src is committed to my repo.
 
 ```
-git subtree add --squash --prefix=src/github.com/shwoodard/jsonapi git@github.com:shwoodard/jsonapi master
+git subtree add --squash --prefix=src/github.com/shwoodard/jsonapi https://github.com/shwoodard/jsonapi.git master
 ```
 
 To update,
 
 ```
-git subtree pull --squash --prefix=src/github.com/shwoodard/jsonapi git@github.com:shwoodard/jsonapi master
+git subtree pull --squash --prefix=src/github.com/shwoodard/jsonapi https://github.com/shwoodard/jsonapi.git master
 ```
 
 This assumes that I have my repo structured with a `src` dir containing
