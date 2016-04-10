@@ -56,7 +56,6 @@ func TestEmbedded(t *testing.T) {
 	}
 
 	posts := payload.Data.Relationships["posts"].(map[string]interface{})["data"].([]interface{})
-	firstPostData := posts[0].(map[string]interface{})
 	firstPostAttrs := posts[0].(map[string]interface{})["attributes"].(map[string]interface{})
 
 	if val, exists := firstPostAttrs["score"]; !exists || val.(float64) != 5.0 {
