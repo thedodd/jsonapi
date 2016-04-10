@@ -3,7 +3,6 @@ package jsonapi
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 )
