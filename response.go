@@ -42,7 +42,7 @@ func MarshalOnePayload(w io.Writer, model interface{}) error {
 func MarshalOne(model interface{}) (*OnePayload, error) {
 	included := make(map[string]*Node)
 
-	rootNode, err := visitModelNode(model, &included, true)
+	rootNode, err := visitModelNode(reflect.ValueOf(model), &included, true)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func MarshalMany(models []interface{}) (*ManyPayload, error) {
 	for i := 0; i < len(models); i++ {
 		model := models[i]
 
-		node, err := visitModelNode(model, &included, true)
+		node, err := visitModelNode(reflect.ValueOf(model), &included, true)
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +131,7 @@ func MarshalMany(models []interface{}) (*ManyPayload, error) {
 //
 // model interface{} should be a pointer to a struct.
 func MarshalOnePayloadEmbedded(w io.Writer, model interface{}) error {
-	rootNode, err := visitModelNode(model, nil, false)
+	rootNode, err := visitModelNode(reflect.ValueOf(model), nil, false)
 	if err != nil {
 		return err
 	}
@@ -145,15 +145,28 @@ func MarshalOnePayloadEmbedded(w io.Writer, model interface{}) error {
 	return nil
 }
 
-func visitModelNode(model interface{}, included *map[string]*Node, sideload bool) (*Node, error) {
+func visitModelNode(model reflect.Value, included *map[string]*Node, sideload bool) (*Node, error) {
 	node := new(Node)
 
 	var er error
 
-	modelValue := reflect.ValueOf(model).Elem()
+	modelValue := model.Elem()
 
 	for i := 0; i < modelValue.NumField(); i++ {
 		structField := modelValue.Type().Field(i)
+
+		if structField.Anonymous {
+			if modelValue.Field(i).IsNil() {
+				continue
+			}
+			if n, err := visitModelNode(modelValue.Field(i), included, sideload); err == nil {
+				node.Extend(n)
+			} else {
+				err = err
+				break
+			}
+		}
+
 		tag := structField.Tag.Get("jsonapi")
 		if tag == "" {
 			continue
@@ -252,10 +265,6 @@ func visitModelNode(model interface{}, included *map[string]*Node, sideload bool
 				continue
 			}
 
-			if node.Relationships == nil {
-				node.Relationships = make(map[string]interface{})
-			}
-
 			if isSlice {
 				relationship, err := visitModelNodeRelationships(args[1], fieldValue, included, sideload)
 
@@ -269,22 +278,22 @@ func visitModelNode(model interface{}, included *map[string]*Node, sideload bool
 							shallowNodes = append(shallowNodes, toShallowNode(n))
 						}
 
-						node.Relationships[args[1]] = &RelationshipManyNode{Data: shallowNodes}
+						node.AddRelationship(args[1], &RelationshipManyNode{Data: shallowNodes})
 					} else {
-						node.Relationships[args[1]] = relationship
+						node.AddRelationship(args[1], relationship)
 					}
 				} else {
 					er = err
 					break
 				}
 			} else {
-				relationship, err := visitModelNode(fieldValue.Interface(), included, sideload)
+				relationship, err := visitModelNode(fieldValue, included, sideload)
 				if err == nil {
 					if sideload {
 						appendIncluded(included, relationship)
-						node.Relationships[args[1]] = &RelationshipOneNode{Data: toShallowNode(relationship)}
+						node.AddRelationship(args[1], &RelationshipOneNode{Data: toShallowNode(relationship)})
 					} else {
-						node.Relationships[args[1]] = &RelationshipOneNode{Data: relationship}
+						node.AddRelationship(args[1], &RelationshipOneNode{Data: relationship})
 					}
 				} else {
 					er = err
@@ -321,7 +330,7 @@ func visitModelNodeRelationships(relationName string, models reflect.Value, incl
 
 	for i := 0; i < models.Len(); i++ {
 		n := models.Index(i).Interface()
-		node, err := visitModelNode(n, included, sideload)
+		node, err := visitModelNode(reflect.ValueOf(n), included, sideload)
 		if err != nil {
 			return nil, err
 		}

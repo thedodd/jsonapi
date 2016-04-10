@@ -3,6 +3,7 @@ package jsonapi
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -19,7 +20,7 @@ type Blog struct {
 }
 
 type Post struct {
-	Blog
+	*Rating
 	Id            int        `jsonapi:"primary,posts"`
 	BlogId        int        `jsonapi:"attr,blog_id"`
 	ClientId      string     `jsonapi:"client-id"`
@@ -30,10 +31,46 @@ type Post struct {
 }
 
 type Comment struct {
+	*Rating
 	Id       int    `jsonapi:"primary,comments"`
 	ClientId string `jsonapi:"client-id"`
 	PostId   int    `jsonapi:"attr,post_id"`
 	Body     string `jsonapi:"attr,body"`
+}
+
+type Rating struct {
+	Score   int    `jsonapi:"attr,score"`
+	Comment string `jsonapi:"attr,comment"`
+}
+
+func TestEmbedded(t *testing.T) {
+	blog := testBlog()
+	buf := bytes.NewBuffer(nil)
+
+	if err := MarshalOnePayloadEmbedded(buf, blog); err != nil {
+		t.Fatal(err)
+	}
+
+	payload := new(OnePayload)
+	if err := json.NewDecoder(buf).Decode(payload); err != nil {
+		t.Fatal(err)
+	}
+
+	posts := payload.Data.Relationships["posts"].(map[string]interface{})["data"].([]interface{})
+	firstPostData := posts[0].(map[string]interface{})
+	firstPostAttrs := posts[0].(map[string]interface{})["attributes"].(map[string]interface{})
+
+	if val, exists := firstPostAttrs["score"]; !exists || val.(float64) != 5.0 {
+		t.Fatalf("Expected emedded score, 5, got %d", val)
+	}
+
+	expected := "Bad ass post!"
+	if val, exists := firstPostAttrs["comment"]; !exists || val.(string) != expected {
+		t.Fatalf("Expected emebedded rating comment to be, %s, was %s.", expected, val)
+	}
+}
+
+func TestEmbedded_nil(t *testing.T) {
 }
 
 func TestHasPrimaryAnnotation(t *testing.T) {
@@ -243,6 +280,10 @@ func testBlog() *Blog {
 		CreatedAt: time.Now(),
 		Posts: []*Post{
 			&Post{
+				Rating: &Rating{
+					Score:   5,
+					Comment: "Bad ass post!",
+				},
 				Id:    1,
 				Title: "Foo",
 				Body:  "Bar",
