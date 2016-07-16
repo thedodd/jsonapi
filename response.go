@@ -62,7 +62,7 @@ func MarshalOnePayloadWithoutIncluded(w io.Writer, model interface{}) error {
 func MarshalOne(model interface{}) (*OnePayload, error) {
 	included := make(map[string]*Node)
 
-	rootNode, err := visitModelNode(reflect.ValueOf(model), &included, true)
+	rootNode, err := visitModelNode(model, &included, true)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func MarshalMany(models []interface{}) (*ManyPayload, error) {
 	for i := 0; i < len(models); i++ {
 		model := models[i]
 
-		node, err := visitModelNode(reflect.ValueOf(model), &included, true)
+		node, err := visitModelNode(model, &included, true)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +151,7 @@ func MarshalMany(models []interface{}) (*ManyPayload, error) {
 //
 // model interface{} should be a pointer to a struct.
 func MarshalOnePayloadEmbedded(w io.Writer, model interface{}) error {
-	rootNode, err := visitModelNode(reflect.ValueOf(model), nil, false)
+	rootNode, err := visitModelNode(model, nil, false)
 	if err != nil {
 		return err
 	}
@@ -165,21 +165,23 @@ func MarshalOnePayloadEmbedded(w io.Writer, model interface{}) error {
 	return nil
 }
 
-func visitModelNode(model reflect.Value, included *map[string]*Node, sideload bool) (*Node, error) {
+func visitModelNode(model interface{}, included *map[string]*Node, sideload bool) (*Node, error) {
 	node := new(Node)
 
 	var er error
 
-	modelValue := model.Elem()
+	modelValue := reflect.ValueOf(model).Elem()
 
 	for i := 0; i < modelValue.NumField(); i++ {
 		structField := modelValue.Type().Field(i)
 
 		if structField.Anonymous {
-			if modelValue.Field(i).IsNil() {
+			fieldValue := modelValue.Field(i)
+			if fieldValue.Kind() != reflect.Ptr || fieldValue.IsNil() {
 				continue
 			}
-			if n, err := visitModelNode(modelValue.Field(i), included, sideload); err == nil {
+
+			if n, err := visitModelNode(modelValue.Field(i).Interface(), included, sideload); err == nil {
 				node.Extend(n)
 			} else {
 				err = err
@@ -211,15 +213,15 @@ func visitModelNode(model reflect.Value, included *map[string]*Node, sideload bo
 		if annotation == "primary" {
 			id := fieldValue.Interface()
 
-			switch nId := id.(type) {
+			switch nID := id.(type) {
 			case string:
-				node.Id = nId
+				node.ID = nID
 			case int:
-				node.Id = strconv.Itoa(nId)
+				node.ID = strconv.Itoa(nID)
 			case int64:
-				node.Id = strconv.FormatInt(nId, 10)
+				node.ID = strconv.FormatInt(nID, 10)
 			case uint64:
-				node.Id = strconv.FormatUint(nId, 10)
+				node.ID = strconv.FormatUint(nID, 10)
 			default:
 				er = ErrBadJSONAPIID
 				break
@@ -229,7 +231,7 @@ func visitModelNode(model reflect.Value, included *map[string]*Node, sideload bo
 		} else if annotation == "client-id" {
 			clientID := fieldValue.String()
 			if clientID != "" {
-				node.ClientId = clientID
+				node.ClientID = clientID
 			}
 		} else if annotation == "attr" {
 			var omitEmpty bool
@@ -268,11 +270,16 @@ func visitModelNode(model reflect.Value, included *map[string]*Node, sideload bo
 					node.Attributes[args[1]] = tm.Unix()
 				}
 			} else {
-				strAttr, ok := fieldValue.Interface().(string)
+				// Dealing with a fieldValue that is not a time
+				emptyValue := reflect.Zero(fieldValue.Type())
 
-				if ok && strAttr == "" && omitEmpty {
+				// See if we need to omit this field
+				if omitEmpty && fieldValue.Interface() == emptyValue.Interface() {
 					continue
-				} else if ok {
+				}
+
+				strAttr, ok := fieldValue.Interface().(string)
+				if ok {
 					node.Attributes[args[1]] = strAttr
 				} else {
 					node.Attributes[args[1]] = fieldValue.Interface()
@@ -283,6 +290,10 @@ func visitModelNode(model reflect.Value, included *map[string]*Node, sideload bo
 
 			if (isSlice && fieldValue.Len() < 1) || (!isSlice && fieldValue.IsNil()) {
 				continue
+			}
+
+			if node.Relationships == nil {
+				node.Relationships = make(map[string]interface{})
 			}
 
 			if isSlice {
@@ -298,7 +309,7 @@ func visitModelNode(model reflect.Value, included *map[string]*Node, sideload bo
 							shallowNodes = append(shallowNodes, toShallowNode(n))
 						}
 
-						node.AddRelationship(args[1], &RelationshipManyNode{Data: shallowNodes})
+						node.Relationships[args[1]] = &RelationshipManyNode{Data: shallowNodes}
 					} else {
 						node.AddRelationship(args[1], relationship)
 					}
@@ -307,7 +318,7 @@ func visitModelNode(model reflect.Value, included *map[string]*Node, sideload bo
 					break
 				}
 			} else {
-				relationship, err := visitModelNode(fieldValue, included, sideload)
+				relationship, err := visitModelNode(fieldValue.Interface(), included, sideload)
 				if err == nil {
 					if sideload {
 						appendIncluded(included, relationship)
@@ -336,7 +347,7 @@ func visitModelNode(model reflect.Value, included *map[string]*Node, sideload bo
 
 func toShallowNode(node *Node) *Node {
 	return &Node{
-		Id:   node.Id,
+		ID:   node.ID,
 		Type: node.Type,
 	}
 }
@@ -350,7 +361,7 @@ func visitModelNodeRelationships(relationName string, models reflect.Value, incl
 
 	for i := 0; i < models.Len(); i++ {
 		n := models.Index(i).Interface()
-		node, err := visitModelNode(reflect.ValueOf(n), included, sideload)
+		node, err := visitModelNode(n, included, sideload)
 		if err != nil {
 			return nil, err
 		}
@@ -365,7 +376,7 @@ func appendIncluded(m *map[string]*Node, nodes ...*Node) {
 	included := *m
 
 	for _, n := range nodes {
-		k := fmt.Sprintf("%s,%s", n.Type, n.Id)
+		k := fmt.Sprintf("%s,%s", n.Type, n.ID)
 
 		if _, hasNode := included[k]; hasNode {
 			continue
