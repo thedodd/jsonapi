@@ -13,6 +13,25 @@ type BadModel struct {
 	ID int `jsonapi:"primary"`
 }
 
+func TestRequestAnonymousPtrField(t *testing.T) {
+	blogInitial := testBlog()
+	buf := bytes.NewBuffer(nil)
+
+	if err := MarshalOnePayloadEmbedded(buf, blogInitial); err != nil {
+		t.Fatal(err)
+	}
+
+	blogFinal := new(Blog)
+
+	if err := UnmarshalPayload(buf, blogFinal); err != nil {
+		t.Fatal(err)
+	}
+
+	if a, e := blogFinal.Posts[0].Comment, blogInitial.Posts[0].Comment; a != e {
+		t.Fatalf("Expected post comment, %s. Got, %s", e, a)
+	}
+}
+
 func TestMalformedTag(t *testing.T) {
 	out := new(BadModel)
 	err := UnmarshalPayload(samplePayload(), out)

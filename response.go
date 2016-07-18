@@ -184,7 +184,7 @@ func visitModelNode(model interface{}, included *map[string]*Node, sideload bool
 			if n, err := visitModelNode(modelValue.Field(i).Interface(), included, sideload); err == nil {
 				node.Extend(n)
 			} else {
-				err = err
+				er = err
 				break
 			}
 		}

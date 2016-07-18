@@ -122,19 +122,32 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 		}
 	}()
 
+	var er error
+
 	modelValue := model.Elem()
 	modelType := model.Type().Elem()
 
-	var er error
-
 	for i := 0; i < modelValue.NumField(); i++ {
 		fieldType := modelType.Field(i)
+		fieldValue := modelValue.Field(i)
+		structField := modelValue.Type().Field(i)
+
+		if structField.Anonymous && fieldValue.Kind() == reflect.Ptr {
+			embeddedStructType := fieldValue.Type().Elem()
+			embeddedStruct := reflect.Indirect(reflect.New(embeddedStructType)).Addr()
+			fieldValue.Set(embeddedStruct)
+
+			if er = unmarshalNode(data, embeddedStruct, included); er == nil {
+				continue
+			} else {
+				break
+			}
+		}
+
 		tag := fieldType.Tag.Get("jsonapi")
 		if tag == "" {
 			continue
 		}
-
-		fieldValue := modelValue.Field(i)
 
 		args := strings.Split(tag, ",")
 
