@@ -89,6 +89,7 @@ func UnmarshalManyPayload(in io.Reader, t reflect.Type) ([]interface{}, error) {
 		return nil, err
 	}
 
+	var models []interface{}
 	if payload.Included != nil {
 		includedMap := make(map[string]*Node)
 		for _, included := range payload.Included {
@@ -96,7 +97,6 @@ func UnmarshalManyPayload(in io.Reader, t reflect.Type) ([]interface{}, error) {
 			includedMap[key] = included
 		}
 
-		var models []interface{}
 		for _, data := range payload.Data {
 			model := reflect.New(t.Elem())
 			err := unmarshalNode(data, model, &includedMap)
@@ -105,21 +105,16 @@ func UnmarshalManyPayload(in io.Reader, t reflect.Type) ([]interface{}, error) {
 			}
 			models = append(models, model.Interface())
 		}
-
-		return models, nil
-	}
-
-	var models []interface{}
-
-	for _, data := range payload.Data {
-		model := reflect.New(t.Elem())
-		err := unmarshalNode(data, model, nil)
-		if err != nil {
-			return nil, err
+	} else {
+		for _, data := range payload.Data {
+			model := reflect.New(t.Elem())
+			err := unmarshalNode(data, model, nil)
+			if err != nil {
+				return nil, err
+			}
+			models = append(models, model.Interface())
 		}
-		models = append(models, model.Interface())
 	}
-
 	return models, nil
 }
 
@@ -304,13 +299,11 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					n := float32(floatValue)
 					numericValue = reflect.ValueOf(&n)
 				case reflect.Float64:
-					n := float64(floatValue)
+					n := floatValue
 					numericValue = reflect.ValueOf(&n)
 				default:
-					// We had a JSON float (numeric), but our field was a non numeric
-					// type
-					er = ErrUnknownFieldNumberType
-					break
+					// Return error immediately to ensure a runtime panic doesn't swallow it.
+					return fmt.Errorf("Invalid type provided for field '%s'. Got '%s', expected '%s'.", args[1], reflect.Float64, kind)
 				}
 
 				if fieldValue.Kind() == reflect.Ptr {
@@ -418,11 +411,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 		}
 	}
 
-	if er != nil {
-		return er
-	}
-
-	return nil
+	return er
 }
 
 func fullNode(n *Node, included *map[string]*Node) *Node {
