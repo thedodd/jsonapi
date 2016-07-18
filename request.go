@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	unsuportedStructTagMsg = "Unsupported jsonapi tag annotation, %s"
 	clientIDAnnotation     = "client-id"
+	invalidTypeErrorTemplate = "Invalid type provided for field '%s'. Got '%s', expected '%s'."
+	unsuportedStructTagMsg = "Unsupported jsonapi tag annotation, %s"
 )
 
 var (
@@ -207,8 +208,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				} else if v.Kind() == reflect.Int {
 					at = v.Int()
 				} else {
-					er = ErrInvalidTime
-					break
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), reflect.Int64)
 				}
 
 				t := time.Unix(at, 0)
@@ -237,8 +237,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				} else if v.Kind() == reflect.Int {
 					at = v.Int()
 				} else {
-					er = ErrInvalidTime
-					break
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), reflect.Int64)
 				}
 
 				v := time.Unix(at, 0)
@@ -303,7 +302,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					numericValue = reflect.ValueOf(&n)
 				default:
 					// Return error immediately to ensure a runtime panic doesn't swallow it.
-					return fmt.Errorf("Invalid type provided for field '%s'. Got '%s', expected '%s'.", args[1], reflect.Float64, kind)
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], reflect.Float64, kind)
 				}
 
 				if fieldValue.Kind() == reflect.Ptr {
