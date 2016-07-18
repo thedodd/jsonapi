@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	unsuportedStructTagMsg = "Unsupported jsonapi tag annotation, %s"
+	invalidTypeErrorTemplate = "Invalid type provided for field '%s'. Got '%s', expected '%s'."
+	unsuportedStructTagMsg   = "Unsupported jsonapi tag annotation, %s"
 )
 
 var (
@@ -23,13 +24,6 @@ var (
 	// ErrInvalidISO8601 is returned when a struct has a time.Time type field and includes
 	// "iso8601" in the tag spec, but the JSON value was not an ISO8601 timestamp string.
 	ErrInvalidISO8601 = errors.New("Only strings can be parsed as dates, ISO8601 timestamps")
-	// ErrUnknownFieldNumberType is returned when the JSON value was a float
-	// (numeric) but the Struct field was a non numeric type (i.e. not int, uint,
-	// float, etc)
-	ErrUnknownFieldNumberType = errors.New("The struct field was not of a known number type")
-	// ErrUnsupportedPtrType is returned when the Struct field was a pointer but
-	// the JSON value was of a different type
-	ErrUnsupportedPtrType = errors.New("Pointer type in struct is not supported")
 )
 
 // UnmarshalPayload converts an io into a struct instance using jsonapi tags on
@@ -93,6 +87,7 @@ func UnmarshalManyPayload(in io.Reader, t reflect.Type) ([]interface{}, error) {
 		return nil, err
 	}
 
+	var models []interface{}
 	if payload.Included != nil {
 		includedMap := make(map[string]*Node)
 		for _, included := range payload.Included {
@@ -100,7 +95,6 @@ func UnmarshalManyPayload(in io.Reader, t reflect.Type) ([]interface{}, error) {
 			includedMap[key] = included
 		}
 
-		var models []interface{}
 		for _, data := range payload.Data {
 			model := reflect.New(t.Elem())
 			err := unmarshalNode(data, model, &includedMap)
@@ -109,21 +103,16 @@ func UnmarshalManyPayload(in io.Reader, t reflect.Type) ([]interface{}, error) {
 			}
 			models = append(models, model.Interface())
 		}
-
-		return models, nil
-	}
-
-	var models []interface{}
-
-	for _, data := range payload.Data {
-		model := reflect.New(t.Elem())
-		err := unmarshalNode(data, model, nil)
-		if err != nil {
-			return nil, err
+	} else {
+		for _, data := range payload.Data {
+			model := reflect.New(t.Elem())
+			err := unmarshalNode(data, model, nil)
+			if err != nil {
+				return nil, err
+			}
+			models = append(models, model.Interface())
 		}
-		models = append(models, model.Interface())
 	}
-
 	return models, nil
 }
 
@@ -306,8 +295,8 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				} else if v.Kind() == reflect.Int {
 					at = v.Int()
 				} else {
-					er = ErrInvalidTime
-					break
+					// Return error immediately to ensure a runtime panic doesn't swallow it.
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), reflect.Int64)
 				}
 
 				t := time.Unix(at, 0)
@@ -358,8 +347,8 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				} else if v.Kind() == reflect.Int {
 					at = v.Int()
 				} else {
-					er = ErrInvalidTime
-					break
+					// Return error immediately to ensure a runtime panic doesn't swallow it.
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), reflect.Int64)
 				}
 
 				v := time.Unix(at, 0)
@@ -420,13 +409,11 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					n := float32(floatValue)
 					numericValue = reflect.ValueOf(&n)
 				case reflect.Float64:
-					n := float64(floatValue)
+					n := floatValue
 					numericValue = reflect.ValueOf(&n)
 				default:
-					// We had a JSON float (numeric), but our field was a non numeric
-					// type
-					er = ErrUnknownFieldNumberType
-					break
+					// Return error immediately to ensure a runtime panic doesn't swallow it.
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], reflect.Float64, kind)
 				}
 
 				assign(fieldValue, numericValue)
@@ -449,19 +436,22 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				case uintptr:
 					concreteVal = reflect.ValueOf(&cVal)
 				default:
-					er = ErrUnsupportedPtrType
-					break
+					// Return error immediately to ensure a runtime panic doesn't swallow it.
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type.Elem())
 				}
 
 				if fieldValue.Type() != concreteVal.Type() {
-					// TODO: use fmt.Errorf so that you can have a more informative
-					// message that reports the attempted type that was not supported.
-					er = ErrUnsupportedPtrType
-					break
+					// Return error immediately to ensure a runtime panic doesn't swallow it.
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type.Elem())
 				}
 
 				fieldValue.Set(concreteVal)
 				continue
+			}
+
+			// As a final catch-all, ensure types line up to avoid a runtime panic.
+			if fieldValue.Kind() != v.Kind() {
+				return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldValue.Kind())
 			}
 
 			fieldValue.Set(reflect.ValueOf(val))
@@ -541,11 +531,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 		}
 	}
 
-	if er != nil {
-		return er
-	}
-
-	return nil
+	return er
 }
 
 func fullNode(n *Node, included *map[string]*Node) *Node {
