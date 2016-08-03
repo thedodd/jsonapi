@@ -338,6 +338,11 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				continue
 			}
 
+			// As a final catch-all, ensure types line up to avoid a runtime panic.
+			if fieldValue.Kind() != v.Kind() {
+				return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldValue.Kind())
+			}
+
 			fieldValue.Set(reflect.ValueOf(val))
 
 		} else if annotation == "relation" {
