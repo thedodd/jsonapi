@@ -326,12 +326,12 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					concreteVal = reflect.ValueOf(&cVal)
 				default:
 					// Return error immediately to ensure a runtime panic doesn't swallow it.
-					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type)
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type.Elem())
 				}
 
 				if fieldValue.Type() != concreteVal.Type() {
 					// Return error immediately to ensure a runtime panic doesn't swallow it.
-					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type)
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type.Elem())
 				}
 
 				fieldValue.Set(concreteVal)

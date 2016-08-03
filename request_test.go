@@ -68,6 +68,22 @@ func TestUnmarshalToStructWithPointerAttr_AbsentVal(t *testing.T) {
 	}
 }
 
+func TestUnmarshalToStructWithPointerAttr_BadType(t *testing.T) {
+	out := new(WithPointer)
+	in := map[string]interface{}{
+		"name": true, // This is the wrong type.
+	}
+
+	err := UnmarshalPayload(sampleWithPointerPayload(in), out)
+	if err == nil {
+		t.Fatalf("Expected error to come up.") // Should fail with invalid type.
+	}
+
+	if err.Error() != "Invalid type provided for field 'name'. Got 'bool', expected 'string'." {
+		t.Fatalf("Unexpected error message.")
+	}
+}
+
 func TestStringPointerField(t *testing.T) {
 	// Build Book payload
 	description := "Hello World!"
