@@ -13,22 +13,15 @@ import (
 )
 
 const (
-	clientIDAnnotation     = "client-id"
+	clientIDAnnotation       = "client-id"
 	invalidTypeErrorTemplate = "Invalid type provided for field '%s'. Got '%s', expected '%s'."
-	unsuportedStructTagMsg = "Unsupported jsonapi tag annotation, %s"
+	unsuportedStructTagMsg   = "Unsupported jsonapi tag annotation, %s"
 )
 
 var (
 	// ErrInvalidTime is returned when a struct has a time.Time type field, but
 	// the JSON value was not a unix timestamp integer.
 	ErrInvalidTime = errors.New("Only numbers can be parsed as dates, unix timestamps")
-	// ErrUnknownFieldNumberType is returned when the JSON value was a float
-	// (numeric) but the Struct field was a non numeric type (i.e. not int, uint,
-	// float, etc)
-	ErrUnknownFieldNumberType = errors.New("The struct field was not of a known number type")
-	// ErrUnsupportedPtrType is returned when the Struct field was a pointer but
-	// the JSON value was of a different type
-	ErrUnsupportedPtrType = errors.New("Pointer type in struct is not supported")
 )
 
 // UnmarshalPayload converts an io into a struct instance using jsonapi tags on
@@ -208,6 +201,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				} else if v.Kind() == reflect.Int {
 					at = v.Int()
 				} else {
+					// Return error immediately to ensure a runtime panic doesn't swallow it.
 					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), reflect.Int64)
 				}
 
@@ -237,6 +231,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				} else if v.Kind() == reflect.Int {
 					at = v.Int()
 				} else {
+					// Return error immediately to ensure a runtime panic doesn't swallow it.
 					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), reflect.Int64)
 				}
 
@@ -330,15 +325,13 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				case uintptr:
 					concreteVal = reflect.ValueOf(&cVal)
 				default:
-					er = ErrUnsupportedPtrType
-					break
+					// Return error immediately to ensure a runtime panic doesn't swallow it.
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type)
 				}
 
 				if fieldValue.Type() != concreteVal.Type() {
-					// TODO: use fmt.Errorf so that you can have a more informative
-					// message that reports the attempted type that was not supported.
-					er = ErrUnsupportedPtrType
-					break
+					// Return error immediately to ensure a runtime panic doesn't swallow it.
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type)
 				}
 
 				fieldValue.Set(concreteVal)
