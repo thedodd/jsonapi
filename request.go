@@ -223,6 +223,31 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				continue
 			}
 
+			if v.Type() == reflect.TypeOf(map[string]interface{}(nil)) {
+				innerMap := val.(map[string]interface{})
+
+				typeOfElem := fieldValue.Type().Elem()
+
+				if typeOfElem == reflect.TypeOf([]string(nil)) {
+					outputMap := make(map[string][]string)
+
+					for k, v := range innerMap {
+						newList := make([]string, 0)
+						valueList := v.([]interface{})
+
+						for _, value := range valueList {
+							newList = append(newList, value.(string))
+						}
+						outputMap[k] = newList
+					}
+					fieldValue.Set(reflect.ValueOf(outputMap))
+					continue
+				} else {
+					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type.Elem())
+				}
+
+			}
+
 			if fieldValue.Type() == reflect.TypeOf(new(time.Time)) {
 				var at int64
 
