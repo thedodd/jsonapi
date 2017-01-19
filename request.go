@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	invalidTypeErrorTemplate = "Invalid type provided for field '%s'. Got '%s', expected '%s'."
-	unsuportedStructTagMsg   = "Unsupported jsonapi tag annotation, %s"
+	invalidTypeErrorTitle  = "Invalid Type"
+	invalidTypeErrorDetail = "Invalid type encountered while unmarshalling."
+	unsuportedStructTagMsg = "Unsupported jsonapi tag annotation, %s"
 )
 
 var (
@@ -296,7 +297,11 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					at = v.Int()
 				} else {
 					// Return error immediately to ensure a runtime panic doesn't swallow it.
-					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), reflect.Int64)
+					return &ErrorObject{
+						Title:  invalidTypeErrorTitle,
+						Detail: invalidTypeErrorDetail,
+						Meta:   &map[string]string{"field": args[1], "received": v.Kind().String(), "expected": reflect.Int64.String()},
+					}
 				}
 
 				t := time.Unix(at, 0)
@@ -348,7 +353,11 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					at = v.Int()
 				} else {
 					// Return error immediately to ensure a runtime panic doesn't swallow it.
-					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), reflect.Int64)
+					return &ErrorObject{
+						Title:  invalidTypeErrorTitle,
+						Detail: invalidTypeErrorDetail,
+						Meta:   &map[string]string{"field": args[1], "received": v.Kind().String(), "expected": reflect.Int64.String()},
+					}
 				}
 
 				v := time.Unix(at, 0)
@@ -413,7 +422,11 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					numericValue = reflect.ValueOf(&n)
 				default:
 					// Return error immediately to ensure a runtime panic doesn't swallow it.
-					return fmt.Errorf(invalidTypeErrorTemplate, args[1], reflect.Float64, kind)
+					return &ErrorObject{
+						Title:  invalidTypeErrorTitle,
+						Detail: invalidTypeErrorDetail,
+						Meta:   &map[string]string{"field": args[1], "received": reflect.Float64.String(), "expected": kind.String()},
+					}
 				}
 
 				assign(fieldValue, numericValue)
@@ -437,12 +450,20 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					concreteVal = reflect.ValueOf(&cVal)
 				default:
 					// Return error immediately to ensure a runtime panic doesn't swallow it.
-					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type.Elem())
+					return &ErrorObject{
+						Title:  invalidTypeErrorTitle,
+						Detail: invalidTypeErrorDetail,
+						Meta:   &map[string]string{"field": args[1], "received": v.Kind().String(), "expected": fieldType.Type.Elem().String()},
+					}
 				}
 
 				if fieldValue.Type() != concreteVal.Type() {
 					// Return error immediately to ensure a runtime panic doesn't swallow it.
-					return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldType.Type.Elem())
+					return &ErrorObject{
+						Title:  invalidTypeErrorTitle,
+						Detail: invalidTypeErrorDetail,
+						Meta:   &map[string]string{"field": args[1], "received": v.Kind().String(), "expected": fieldType.Type.Elem().String()},
+					}
 				}
 
 				fieldValue.Set(concreteVal)
@@ -451,9 +472,12 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 
 			// As a final catch-all, ensure types line up to avoid a runtime panic.
 			if fieldValue.Kind() != v.Kind() {
-				return fmt.Errorf(invalidTypeErrorTemplate, args[1], v.Kind(), fieldValue.Kind())
+				return &ErrorObject{
+					Title:  invalidTypeErrorTitle,
+					Detail: invalidTypeErrorDetail,
+					Meta:   &map[string]string{"field": args[1], "received": v.Kind().String(), "expected": fieldValue.Kind().String()},
+				}
 			}
-
 			fieldValue.Set(reflect.ValueOf(val))
 
 		} else if annotation == "relation" {
