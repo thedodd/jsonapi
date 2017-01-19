@@ -6,6 +6,68 @@ import (
 	"io"
 )
 
+// MarshalErrors will take the given `[]error` and format the entire slice as a valid JSON API errors payload.
+// For more information of JSON API error payloads, see the spec here: http://jsonapi.org/format/#document-top-level
+// and here: http://jsonapi.org/format/#error-objects
+//
+// This function works by passing each `error` in the given slice through a routine which attempts
+// to cast the error to each of this package's `Error<FieldName>Compatible` interfaces. Though it
+// works for errors which do not implement any of these interfaces as well.
+//
+// To use this function in your code effectively, make your package's error types implement some or
+// all of the error compatibility interfaces (`ErrorTitleCompatible`, `ErrorDetailCompatible`, ...).
+// Doing so will allow you to pass your error types directly to this method, and they will be
+// serialized as JSON API compatible error objects within a JSON API compatible errors payload.
+func MarshalErrors(w io.Writer, errs []error) error {
+	// Serialize the given errors.
+	var formattedErrors []ErrorObject
+	for _, err := range errs {
+		e := marshalError(err)
+		formattedErrors = append(formattedErrors, e)
+	}
+
+	// Write out the serialize errors payload.
+	if err := json.NewEncoder(w).Encode(&ErrorsPayload{Errors: formattedErrors}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// marshalError will serialize the given error as best as possible according to this
+// package's `Error<field>Compatible` interfaces.
+func marshalError(err error) ErrorObject {
+	errorObject := ErrorObject{}
+	if e, ok := err.(ErrorIDCompatible); ok {
+		errorObject.ID = e.GetID()
+	}
+
+	if e, ok := err.(ErrorTitleCompatible); ok {
+		errorObject.Title = e.GetTitle()
+	} else {
+		errorObject.Title = fmt.Sprintf("Encountered error of type: %T", err)
+	}
+
+	if e, ok := err.(ErrorDetailCompatible); ok {
+		errorObject.Detail = e.GetDetail()
+	} else {
+		errorObject.Detail = err.Error()
+	}
+
+	if e, ok := err.(ErrorStatusCompatible); ok {
+		errorObject.Status = e.GetStatus()
+	}
+
+	if e, ok := err.(ErrorCodeCompatible); ok {
+		errorObject.Code = e.GetCode()
+	}
+
+	if e, ok := err.(ErrorMetaCompatible); ok {
+		errorObject.Meta = e.GetMeta()
+	}
+
+	return errorObject
+}
+
 // ErrorsPayload is a serializer struct for representing a valid JSON API errors payload.
 type ErrorsPayload struct {
 	Errors []ErrorObject `json:"errors"`
@@ -66,59 +128,6 @@ func (e *ErrorObject) GetCode() string { return e.Code }
 
 // GetMeta implements the `ErrorMetaCompatible` interface.
 func (e *ErrorObject) GetMeta() *map[string]string { return e.Meta }
-
-// MarshalErrors will take the given `[]error` and format the entire slice as a valid JSON API errors payload.
-// For more information of JSON API error payloads, see the spec here: http://jsonapi.org/format/#document-top-level
-// and here: http://jsonapi.org/format/#error-objects
-func MarshalErrors(w io.Writer, errs []error) error {
-	// Serialize the given errors.
-	var formattedErrors []ErrorObject
-	for _, err := range errs {
-		e := MarshalError(err)
-		formattedErrors = append(formattedErrors, e)
-	}
-
-	// Write out the serialize errors payload.
-	if err := json.NewEncoder(w).Encode(&ErrorsPayload{Errors: formattedErrors}); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalError will serialize the given error as best as possible according to this
-// package's `Error<field>Compatible` interfaces.
-func MarshalError(err error) ErrorObject {
-	errorObject := ErrorObject{}
-	if e, ok := err.(ErrorIDCompatible); ok {
-		errorObject.ID = e.GetID()
-	}
-
-	if e, ok := err.(ErrorTitleCompatible); ok {
-		errorObject.Title = e.GetTitle()
-	} else {
-		errorObject.Title = fmt.Sprintf("Encountered error of type: %T", err)
-	}
-
-	if e, ok := err.(ErrorDetailCompatible); ok {
-		errorObject.Detail = e.GetDetail()
-	} else {
-		errorObject.Detail = err.Error()
-	}
-
-	if e, ok := err.(ErrorStatusCompatible); ok {
-		errorObject.Status = e.GetStatus()
-	}
-
-	if e, ok := err.(ErrorCodeCompatible); ok {
-		errorObject.Code = e.GetCode()
-	}
-
-	if e, ok := err.(ErrorMetaCompatible); ok {
-		errorObject.Meta = e.GetMeta()
-	}
-
-	return errorObject
-}
 
 /////////////////////////////////////////////
 // JSON API Error Compatibility Interfaces //

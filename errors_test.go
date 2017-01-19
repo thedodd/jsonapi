@@ -72,7 +72,7 @@ func TestMarshalErrorsWritesTheExpectedPayload(t *testing.T) {
 func TestMarshalErrorSerializesErrorAccordingToInterfaces(t *testing.T) {
 	var err error = &errorInterfaceTester{}
 
-	output := MarshalError(err)
+	output := marshalError(err)
 	meta := *output.Meta
 	val, ok := meta["key"]
 
@@ -99,7 +99,7 @@ func TestMarshalErrorSerializesErrorAccordingToInterfaces(t *testing.T) {
 func TestMarshalErrorSerializesUsingFallbackApproachForIncompatibleErrors(t *testing.T) {
 	err := errors.New("Testing fallback.")
 
-	output := MarshalError(err)
+	output := marshalError(err)
 
 	if output.ID != "" {
 		t.Fatal("Unexpected value for error field: ID")
