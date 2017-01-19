@@ -300,7 +300,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					return &ErrorObject{
 						Title:  invalidTypeErrorTitle,
 						Detail: invalidTypeErrorDetail,
-						Meta:   &map[string]string{"field": args[1], "received": v.Kind().String(), "expected": reflect.Int64.String()},
+						Meta:   &map[string]interface{}{"field": args[1], "received": v.Kind().String(), "expected": reflect.Int64.String()},
 					}
 				}
 
@@ -356,7 +356,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					return &ErrorObject{
 						Title:  invalidTypeErrorTitle,
 						Detail: invalidTypeErrorDetail,
-						Meta:   &map[string]string{"field": args[1], "received": v.Kind().String(), "expected": reflect.Int64.String()},
+						Meta:   &map[string]interface{}{"field": args[1], "received": v.Kind().String(), "expected": reflect.Int64.String()},
 					}
 				}
 
@@ -425,7 +425,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					return &ErrorObject{
 						Title:  invalidTypeErrorTitle,
 						Detail: invalidTypeErrorDetail,
-						Meta:   &map[string]string{"field": args[1], "received": reflect.Float64.String(), "expected": kind.String()},
+						Meta:   &map[string]interface{}{"field": args[1], "received": reflect.Float64.String(), "expected": kind.String()},
 					}
 				}
 
@@ -453,7 +453,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					return &ErrorObject{
 						Title:  invalidTypeErrorTitle,
 						Detail: invalidTypeErrorDetail,
-						Meta:   &map[string]string{"field": args[1], "received": v.Kind().String(), "expected": fieldType.Type.Elem().String()},
+						Meta:   &map[string]interface{}{"field": args[1], "received": v.Kind().String(), "expected": fieldType.Type.Elem().String()},
 					}
 				}
 
@@ -462,7 +462,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 					return &ErrorObject{
 						Title:  invalidTypeErrorTitle,
 						Detail: invalidTypeErrorDetail,
-						Meta:   &map[string]string{"field": args[1], "received": v.Kind().String(), "expected": fieldType.Type.Elem().String()},
+						Meta:   &map[string]interface{}{"field": args[1], "received": v.Kind().String(), "expected": fieldType.Type.Elem().String()},
 					}
 				}
 
@@ -475,7 +475,7 @@ func unmarshalNode(data *Node, model reflect.Value, included *map[string]*Node) 
 				return &ErrorObject{
 					Title:  invalidTypeErrorTitle,
 					Detail: invalidTypeErrorDetail,
-					Meta:   &map[string]string{"field": args[1], "received": v.Kind().String(), "expected": fieldValue.Kind().String()},
+					Meta:   &map[string]interface{}{"field": args[1], "received": v.Kind().String(), "expected": fieldValue.Kind().String()},
 				}
 			}
 			fieldValue.Set(reflect.ValueOf(val))

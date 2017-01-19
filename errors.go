@@ -103,7 +103,7 @@ type ErrorObject struct {
 	// Source *Source `json:"source,omitempty"`
 
 	// Meta is an object containing non-standard meta-information about the error.
-	Meta *map[string]string `json:"meta,omitempty"`
+	Meta *map[string]interface{} `json:"meta,omitempty"`
 }
 
 // Error implements the `Error` interface.
@@ -127,7 +127,7 @@ func (e *ErrorObject) GetStatus() string { return e.Status }
 func (e *ErrorObject) GetCode() string { return e.Code }
 
 // GetMeta implements the `ErrorMetaCompatible` interface.
-func (e *ErrorObject) GetMeta() *map[string]string { return e.Meta }
+func (e *ErrorObject) GetMeta() *map[string]interface{} { return e.Meta }
 
 /////////////////////////////////////////////
 // JSON API Error Compatibility Interfaces //
@@ -160,5 +160,5 @@ type ErrorCodeCompatible interface {
 
 // ErrorMetaCompatible is the interface needed for exposing the `meta` field of a JSON API compatible error.
 type ErrorMetaCompatible interface {
-	GetMeta() *map[string]string
+	GetMeta() *map[string]interface{}
 }

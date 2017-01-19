@@ -112,7 +112,7 @@ func TestUnmarshalToStructWithPointerAttr_BadType(t *testing.T) {
 	in := map[string]interface{}{
 		"name": true, // This is the wrong type.
 	}
-	expectedError := &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]string{"field": "name", "received": "bool", "expected": "string"}}
+	expectedError := &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]interface{}{"field": "name", "received": "bool", "expected": "string"}}
 	expectedErrorMessage := fmt.Sprintf("Error: %s %s\n", expectedError.Title, expectedError.Detail)
 
 	err := UnmarshalPayload(sampleWithPointerPayload(in), out)
@@ -186,10 +186,10 @@ func TestUnmarshalInvalidJSON_BadType(t *testing.T) {
 		BadValue interface{}
 		Error    *ErrorObject
 	}{ // The `Field` values here correspond to the `ModelBadTypes` jsonapi fields.
-		{Field: "string_field", BadValue: 0, Error: &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]string{"field": "string_field", "received": "float64", "expected": "string"}}},
-		{Field: "float_field", BadValue: "A string.", Error: &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]string{"field": "float_field", "received": "string", "expected": "float64"}}},
-		{Field: "time_field", BadValue: "A string.", Error: &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]string{"field": "time_field", "received": "string", "expected": "int64"}}},
-		{Field: "time_ptr_field", BadValue: "A string.", Error: &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]string{"field": "time_ptr_field", "received": "string", "expected": "int64"}}},
+		{Field: "string_field", BadValue: 0, Error: &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]interface{}{"field": "string_field", "received": "float64", "expected": "string"}}},
+		{Field: "float_field", BadValue: "A string.", Error: &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]interface{}{"field": "float_field", "received": "string", "expected": "float64"}}},
+		{Field: "time_field", BadValue: "A string.", Error: &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]interface{}{"field": "time_field", "received": "string", "expected": "int64"}}},
+		{Field: "time_ptr_field", BadValue: "A string.", Error: &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]interface{}{"field": "time_ptr_field", "received": "string", "expected": "int64"}}},
 	}
 	for _, test := range badTypeTests {
 		t.Run(fmt.Sprintf("Test_%s", test.Field), func(t *testing.T) {

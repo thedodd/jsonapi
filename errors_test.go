@@ -12,13 +12,15 @@ import (
 
 type errorInterfaceTester struct{}
 
-func (e *errorInterfaceTester) Error() string               { return "Test Error." }
-func (e *errorInterfaceTester) GetID() string               { return "Test ID." }
-func (e *errorInterfaceTester) GetTitle() string            { return "Test Title." }
-func (e *errorInterfaceTester) GetDetail() string           { return "Test Detail." }
-func (e *errorInterfaceTester) GetStatus() string           { return "400" }
-func (e *errorInterfaceTester) GetCode() string             { return "E1100" }
-func (e *errorInterfaceTester) GetMeta() *map[string]string { return &(map[string]string{"key": "val"}) }
+func (e *errorInterfaceTester) Error() string     { return "Test Error." }
+func (e *errorInterfaceTester) GetID() string     { return "Test ID." }
+func (e *errorInterfaceTester) GetTitle() string  { return "Test Title." }
+func (e *errorInterfaceTester) GetDetail() string { return "Test Detail." }
+func (e *errorInterfaceTester) GetStatus() string { return "400" }
+func (e *errorInterfaceTester) GetCode() string   { return "E1100" }
+func (e *errorInterfaceTester) GetMeta() *map[string]interface{} {
+	return &(map[string]interface{}{"key": "val"})
+}
 
 func TestErrorObjectWritesExpectedErrorMessage(t *testing.T) {
 	err := &ErrorObject{Title: "Title test.", Detail: "Detail test."}
@@ -49,7 +51,7 @@ func TestMarshalErrorsWritesTheExpectedPayload(t *testing.T) {
 			}},
 		},
 		{ // This tests that the `Meta` field is serialized properly.
-			In: []error{&ErrorObject{Title: "Test title.", Detail: "Test detail", Meta: &map[string]string{"key": "val"}}},
+			In: []error{&ErrorObject{Title: "Test title.", Detail: "Test detail", Meta: &map[string]interface{}{"key": "val"}}},
 			Out: map[string]interface{}{"errors": []interface{}{
 				map[string]interface{}{"title": "Test title.", "detail": "Test detail", "meta": map[string]interface{}{"key": "val"}},
 			}},
