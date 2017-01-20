@@ -332,7 +332,7 @@ MarshalErrors(w io.Writer, errs []error) error
 
 Writes a JSON API response using the given `[]error`. This function works by passing each `error` in the given slice through a routine which attempts to cast the error to each of this package's `Error<FieldName>Compatible` interfaces. Though it works for errors which do not implement any of these interfaces as well.
 
-To use this function in your code effectively, make your package's error types implement some or all of the error compatibility interfaces (`ErrorTitleCompatible`, `ErrorDetailCompatible`, ...). Doing so gives you direct control over what will appear in the serialied error object's fields. Without implementing these interfaces, the `title` & `detail` fields will be populated with derived data about the error.
+To use this function in your code effectively, make your package's error types implement some or all of the error compatibility interfaces (`ErrorTitleCompatible`, `ErrorDetailCompatible`, &c). Doing so gives you direct control over what will appear in the serialied error object's fields. Without implementing these interfaces, the `title` & `detail` fields will be populated with derived data about the error.
 
 ##### Errors Example Code
 ```go

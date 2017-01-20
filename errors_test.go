@@ -58,17 +58,15 @@ func TestMarshalErrorsWritesTheExpectedPayload(t *testing.T) {
 		},
 	}
 	for _, testRow := range marshalErrorsTableTasts {
-		t.Run("Test row of TestMarshalErrorsWritesTheExpectedPayload test table.", func(t *testing.T) {
-			buffer, output := bytes.NewBuffer(nil), map[string]interface{}{}
-			var writer io.Writer = buffer
+		buffer, output := bytes.NewBuffer(nil), map[string]interface{}{}
+		var writer io.Writer = buffer
 
-			_ = MarshalErrors(writer, testRow.In)
-			json.Unmarshal(buffer.Bytes(), &output)
+		_ = MarshalErrors(writer, testRow.In)
+		json.Unmarshal(buffer.Bytes(), &output)
 
-			if !reflect.DeepEqual(output, testRow.Out) {
-				t.Fatalf("Expected: \n%#v \nto equal: \n%#v", output, testRow.Out)
-			}
-		})
+		if !reflect.DeepEqual(output, testRow.Out) {
+			t.Fatalf("Expected: \n%#v \nto equal: \n%#v", output, testRow.Out)
+		}
 	}
 }
 

@@ -192,24 +192,22 @@ func TestUnmarshalInvalidJSON_BadType(t *testing.T) {
 		{Field: "time_ptr_field", BadValue: "A string.", Error: &ErrorObject{Title: invalidTypeErrorTitle, Detail: invalidTypeErrorDetail, Meta: &map[string]interface{}{"field": "time_ptr_field", "received": "string", "expected": "int64"}}},
 	}
 	for _, test := range badTypeTests {
-		t.Run(fmt.Sprintf("Test_%s", test.Field), func(t *testing.T) {
-			out := new(ModelBadTypes)
-			in := map[string]interface{}{}
-			in[test.Field] = test.BadValue
-			expectedErrorMessage := fmt.Sprintf("Error: %s %s\n", test.Error.Title, test.Error.Detail)
+		out := new(ModelBadTypes)
+		in := map[string]interface{}{}
+		in[test.Field] = test.BadValue
+		expectedErrorMessage := fmt.Sprintf("Error: %s %s\n", test.Error.Title, test.Error.Detail)
 
-			err := UnmarshalPayload(samplePayloadWithBadTypes(in), out)
+		err := UnmarshalPayload(samplePayloadWithBadTypes(in), out)
 
-			if err == nil {
-				t.Fatalf("Expected error due to invalid type.")
-			}
-			if err.Error() != expectedErrorMessage {
-				t.Fatalf("Unexpected error message: %s", err.Error())
-			}
-			if e, ok := err.(*ErrorObject); !ok || !reflect.DeepEqual(e, test.Error) {
-				t.Fatalf("Expected:\n%#v%#v\nto equal:\n%#v%#v", e, *e.Meta, test.Error, *test.Error.Meta)
-			}
-		})
+		if err == nil {
+			t.Fatalf("Expected error due to invalid type.")
+		}
+		if err.Error() != expectedErrorMessage {
+			t.Fatalf("Unexpected error message: %s", err.Error())
+		}
+		if e, ok := err.(*ErrorObject); !ok || !reflect.DeepEqual(e, test.Error) {
+			t.Fatalf("Expected:\n%#v%#v\nto equal:\n%#v%#v", e, *e.Meta, test.Error, *test.Error.Meta)
+		}
 	}
 }
 
