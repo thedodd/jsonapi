@@ -322,6 +322,38 @@ func (post Post) JSONAPIRelationshipLinks(relation string) *map[string]interface
 }
 ```
 
+### Errors
+This package also implements support for JSON API compatible `errors` payloads, as well as a universal way to serialize any type implementing `Error` as a valid JSON API error object.
+
+#### `MarshalErrors`
+```go
+MarshalErrors(w io.Writer, errs []error) error
+```
+
+Writes a JSON API response using the given `[]error`. This function works by passing each `error` in the given slice through a routine which attempts to cast the error to each of this package's `Error<FieldName>Compatible` interfaces. Though it works for errors which do not implement any of these interfaces as well.
+
+To use this function in your code effectively, make your package's error types implement some or all of the error compatibility interfaces (`ErrorTitleCompatible`, `ErrorDetailCompatible`, ...). Doing so gives you direct control over what will appear in the serialied error object's fields. Without implementing these interfaces, the `title` & `detail` fields will be populated with derived data about the error.
+
+##### Errors Example Code
+```go
+// An error has come up in your code, so set an appropriate status, and serialize the error.
+if err := validate(&myStructToValidate); err != nil {
+	w.WriteHeader(http.StatusBadRequest)
+	jsonapi.MarshalErrors(w, []errors{err})
+	return
+}
+
+// Or, use this package's `ErrorObject` for full control of error output (it implements all of this package's `Error<Field>Compatible` interfaces). Or build your own error types.
+err := &ErrorObject{
+	Title: "Validation Error",
+	Detail: "Given request body was invalid.",
+	Status: http.StatusBadRequest,
+	Meta: map[string]interface{}{"field": "some_field", "error": "bad type", "expected": "string", "received": "float64"},
+}
+jsonapi.MarshalErrors(w, []errors{err})
+return
+```
+
 ## Testing
 
 ### `MarshalOnePayloadEmbedded`

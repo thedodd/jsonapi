@@ -6,18 +6,18 @@ import (
 	"io"
 )
 
-// MarshalErrors will take the given `[]error` and format the entire slice as a valid JSON API errors payload.
-// For more information of JSON API error payloads, see the spec here: http://jsonapi.org/format/#document-top-level
+// MarshalErrors writes a JSON API response using the given `[]error`.
+// This function works by passing each `error` in the given slice through a routine which attempts
+// to cast the error to each of this package's `Error<FieldName>Compatible` interfaces. Though
+// it works for errors which do not implement any of these interfaces as well. For more information
+// on JSON API error payloads, see the spec here: http://jsonapi.org/format/#document-top-level
 // and here: http://jsonapi.org/format/#error-objects
 //
-// This function works by passing each `error` in the given slice through a routine which attempts
-// to cast the error to each of this package's `Error<FieldName>Compatible` interfaces. Though it
-// works for errors which do not implement any of these interfaces as well.
-//
-// To use this function in your code effectively, make your package's error types implement some or
-// all of the error compatibility interfaces (`ErrorTitleCompatible`, `ErrorDetailCompatible`, ...).
-// Doing so will allow you to pass your error types directly to this method, and they will be
-// serialized as JSON API compatible error objects within a JSON API compatible errors payload.
+// To use this function in your code effectively, make your package's error types implement some
+// or all of the error compatibility interfaces (`ErrorTitleCompatible`, `ErrorDetailCompatible`,
+// ...). Doing so gives you direct control over what will appear in the serialied error object's
+// fields. Without implementing these interfaces, the `title` & `detail` fields will be populated
+// with derived data about the error.
 func MarshalErrors(w io.Writer, errs []error) error {
 	// Serialize the given errors.
 	var formattedErrors []ErrorObject
